@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D, Image & Video ASCII Studio v2.9</title>
+  
+  <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #050505;
+      color: #fff;
+      font-family: monospace;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .workspace-background {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1;
+    }
+
+    .workspace-background > div {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      overflow: hidden !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+    }
+
+    .workspace-background table {
+      width: 100% !important;
+      height: 100% !important;
+      border-collapse: collapse !important;
+      table-layout: fixed;
+    }
+
+    .floating-window {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 360px;
+      max-height: calc(100vh - 40px);
+      background: rgba(12, 12, 12, 0.94);
+      border: 1px solid #333;
+      border-radius: 6px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+      backdrop-filter: blur(8px);
+      overflow: hidden;
+    }
+
+    .window-header {
+      background: #151515;
+      border-bottom: 1px solid #222;
+      padding: 10px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #00ff66;
+    }
+
+    .window-controls {
+      display: flex;
+      gap: 6px;
+    }
+
+    .window-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #333;
+    }
+
+    .nav-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: #111;
+      border-bottom: 1px solid #222;
+    }
+
+    .nav-tab {
+      padding: 10px;
+      text-align: center;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #777;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    .nav-tab.active {
+      color: #00ff66;
+      border-bottom-color: #00ff66;
+      background: rgba(0, 255, 102, 0.05);
+    }
+
+    .window-body {
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+    }
+
+    .tab-content {
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    .panel-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border-bottom: 1px solid #222;
+      padding-bottom: 12px;
+    }
+
+    .panel-section:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .panel-title {
+      font-size: 0.7rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #00ff66;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .control-group label {
+      font-size: 0.73rem;
+      color: #aaa;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-group input[type="range"] {
+      width: 100%;
+      accent-color: #00ff66;
+      cursor: pointer;
+    }
+
+    .control-group select, 
+    .control-group input[type="color"],
+    .control-group input[type="text"] {
+      width: 100%;
+      background: #111;
+      border: 1px solid #333;
+      color: #fff;
+      padding: 6px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      border-radius: 4px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.75rem;
+      color: #aaa;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 15px;
+      height: 15px;
+      background: #111;
+      border: 1px solid #444;
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+      display: grid;
+      place-content: center;
+    }
+
+    .checkbox-group input[type="checkbox"]::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      transform: scale(0);
+      transition: 120ms transform ease-in-out;
+      box-shadow: inset 1em 1em #00ff66;
+      transform-origin: center;
+      clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 18%, 80% 0%, 43% 62%);
+    }
+
+    .checkbox-group input[type="checkbox"]:checked {
+      background: #151515;
+      border-color: #00ff66;
+    }
+
+    .checkbox-group input[type="checkbox"]:checked::before {
+      transform: scale(1);
+    }
+
+    .btn {
+      background: #1a1a1a;
+      color: #00ff66;
+      font-weight: bold;
+      font-family: inherit;
+      padding: 8px;
+      border: 1px solid #333;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+      display: block;
+      width: 100%;
+      font-size: 0.73rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn:hover {
+      background: #252525;
+      border-color: #00ff66;
+    }
+
+    .btn-primary {
+      background: #00ff66;
+      color: #000;
+      border: none;
+    }
+
+    .btn-primary:hover {
+      background: #00cc52;
+    }
+
+    .btn-recording {
+      background: #ff0055 !important;
+      color: #fff !important;
+      border-color: #ff0055 !important;
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 1; }
+      to { opacity: 0.6; }
+    }
+
+    .res-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .btn-res {
+      background: #111;
+      color: #888;
+      border: 1px solid #333;
+      padding: 6px;
+      font-size: 0.68rem;
+    }
+
+    .btn-res.active {
+      background: #1a1a1a;
+      color: #00ff66;
+      border-color: #00ff66;
+    }
+
+    .export-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(5px);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .export-modal-box {
+      background: #111;
+      border: 1px solid #00ff66;
+      border-radius: 6px;
+      width: 340px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      box-shadow: 0 10px 30px rgba(0,255,102,0.2);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <div class="workspace-background" id="workspace"></div>
+  <video id="hiddenVideo" loop muted playsinline style="display:none;"></video>
+
+  <div class="floating-window">
+    <div class="window-header">
+      <span>ASCII Studio v2.9</span>
+      <div class="window-controls">
+        <div class="window-dot"></div>
+        <div class="window-dot"></div>
+        <div class="window-dot"></div>
+      </div>
+    </div>
+
+    <div class="nav-tabs">
+      <div class="nav-tab active" data-tab="image-editor">Edytor Obrazu</div>
+      <div class="nav-tab" data-tab="ascii-settings">ASCII & Styl</div>
+    </div>
+
+    <div class="window-body">
+
+      <!-- ZAKŁADKA 1: EDYTOR OBRAZU -->
+      <div class="tab-content active" id="tab-image-editor">
+        <div class="panel-section">
+          <div class="panel-title">Edycja Tonalna & Kolory</div>
+          
+          <div class="control-group">
+            <label>Jasność <span id="valBrightness">1.0</span></label>
+            <input type="range" id="brightness" min="0.2" max="3.0" step="0.1" value="1.0">
+          </div>
+
+          <div class="control-group">
+            <label>Kontrast <span id="valContrast">2.5</span></label>
+            <input type="range" id="contrast" min="0.5" max="5.0" step="0.2" value="2.5">
+          </div>
+
+          <div class="control-group">
+            <label>Gamma / Cienie <span id="valGamma">1.0</span></label>
+            <input type="range" id="gamma" min="0.3" max="2.5" step="0.1" value="1.0">
+          </div>
+
+          <div class="control-group">
+            <label>Nasycenie Barw <span id="valSaturate">100%</span></label>
+            <input type="range" id="saturate" min="0" max="300" step="10" value="100">
+          </div>
+
+          <div class="control-group">
+            <label>Odcień (Hue Rotate) <span id="valHue">0°</span></label>
+            <input type="range" id="hue" min="-180" max="180" step="10" value="0">
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-title">Przekształcenia & Kadr</div>
+
+          <div class="control-group">
+            <label>Zoom / Skala Obrazu <span id="valZoom">0.8x</span></label>
+            <input type="range" id="zoom" min="0.2" max="2.5" step="0.1" value="0.8">
+          </div>
+
+          <div class="control-group">
+            <label>Obrót Obrazu / Wideo</label>
+            <select id="rotation">
+              <option value="0">0° (Standard)</option>
+              <option value="90">90° W prawo</option>
+              <option value="180">180° Do góry nogami</option>
+              <option value="270">270° W lewo</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label>Ostrość / Rozmycie <span id="valSharpen">0</span></label>
+            <input type="range" id="sharpen" min="-100" max="100" step="5" value="0">
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-title">Przetwarzanie Krawędzi</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <label class="checkbox-group">
+              <input type="checkbox" id="invert"> Negatyw / Odwrócenie
+            </label>
+            <label class="checkbox-group">
+              <input type="checkbox" id="ditherEnable"> Dithering (Bayer)
+            </label>
+            <label class="checkbox-group">
+              <input type="checkbox" id="edgeDetect"> Detekcja Krawędzi (Sobel)
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- ZAKŁADKA 2: ASCII & STYL -->
+      <div class="tab-content" id="tab-ascii-settings">
+        <div class="panel-section">
+          <div class="panel-title">Siatka i Rozdzielczość</div>
+          <div class="res-grid">
+            <button class="btn btn-res" data-res="0.06">Ultra Gęsta</button>
+            <button class="btn btn-res" data-res="0.10">Wysoka</button>
+            <button class="btn btn-res active" data-res="0.15">Standard</button>
+            <button class="btn btn-res" data-res="0.25">Niska</button>
+            <button class="btn btn-res" data-res="0.40">Retro Blok</button>
+            <button class="btn btn-res" data-res="0.60">Gigantyczna</button>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-title">Wybór Znaków</div>
+          <div class="control-group">
+            <label>Zestaw Presetu</label>
+            <select id="charSet">
+              <option value=" .:-=+*#%@">Standardowy ( .:-=+*#%@)</option>
+              <option value=" ░▒▓█">Bloki Grayscale ( ░▒▓█)</option>
+              <option value=" ⠁⠃⠇⠧⠷⠿">Braille ( ⠁⠃⠇⠧⠷⠿)</option>
+              <option value=" .'`^&quot;,-~:;Il!i><~+_-?][}{1)(|\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$@">Rozbudowany (Asciify)</option>
+              <option value=" 01">Binarny ( 01)</option>
+              <option value=" ┼├┤┴┬┌┐└┘│─">Ramki / Grid ( ┼├┤│─)</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label>Własne Znaki</label>
+            <input type="text" id="customCharSet" placeholder="np. .:-=#@">
+          </div>
+
+          <div class="control-group">
+            <label>Progowanie / Cutoff <span id="valThreshold">0</span></label>
+            <input type="range" id="threshold" min="0" max="100" step="5" value="0">
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-title">Stylistyka & Kolory Tekstu</div>
+          <div class="control-group">
+            <label>Motyw Kolorystyczny</label>
+            <select id="colorMode">
+              <option value="mono">Jednolity Kolor</option>
+              <option value="matrix">Matrix (Zielony fosfor)</option>
+              <option value="cyberpunk">Cyberpunk (Róż / Cyjan)</option>
+              <option value="amber">Amber (Retro bursztyn)</option>
+            </select>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="control-group">
+              <label>Kolor Tekstu</label>
+              <input type="color" id="textColor" value="#00ff66">
+            </div>
+
+            <div class="control-group">
+              <label>Kolor Tła</label>
+              <input type="color" id="bgColor" value="#000000">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WSPÓLNA SEKCJA PLIKÓW I EKSPORTU NA DOLE -->
+      <div class="panel-section" style="margin-top: auto; border-top: 1px solid #222; padding-top: 12px;">
+        <label class="btn btn-primary" style="display:block; text-align:center; padding:10px; cursor:pointer;">
+          Wczytaj 3D / Obraz / Video
+          <input type="file" id="fileInput" accept=".gltf,.glb,.png,.jpg,.jpeg,.webp,.mp4,.webm,.ogv">
+        </label>
+
+        <button class="btn" id="openExportModalBtn" style="border-color:#00ff66; margin-top:6px;">
+          Opcje Eksportu Pliku
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="export-modal" id="exportModal">
+    <div class="export-modal-box">
+      <div class="panel-title">Ustawienia Eksportu</div>
+      
+      <label class="checkbox-group">
+        <input type="checkbox" id="modalRenderColors"> Renderuj z pełnymi kolorami zdjęcia (True Color)
+      </label>
+
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button class="btn" id="exportVideoBtn" style="border-color:#ff0055; color:#ff0055;">Nagraj jako Video (WebM)</button>
+        <button class="btn" id="exportReactBtn">Pobierz jako React (Vite)</button>
+        <button class="btn" id="exportTxtBtn">Pobierz jako TXT</button>
+        <button class="btn" id="copyTextBtn">Kopiuj do schowka</button>
+        <button class="btn" id="exportHtmlBtn">Pobierz jako HTML</button>
+        <button class="btn" id="exportPngBtn">Zrzut ekranu (PNG)</button>
+      </div>
+
+      <button class="btn" id="closeExportModalBtn" style="border-color:#666; color:#aaa; margin-top:6px;">Zamknij</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { AsciiEffect } from 'three/addons/effects/AsciiEffect.js';
+
+    const workspace = document.getElementById('workspace');
+    const fileInput = document.getElementById('fileInput');
+    const hiddenVideo = document.getElementById('hiddenVideo');
+    const exportModal = document.getElementById('exportModal');
+
+    let currentResolution = 0.15;
+    let isMediaLoaded = false;
+    let videoTexture = null;
+
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let isRecording = false;
+
+    const ui = {
+      brightness: document.getElementById('brightness'),
+      contrast: document.getElementById('contrast'),
+      gamma: document.getElementById('gamma'),
+      saturate: document.getElementById('saturate'),
+      hue: document.getElementById('hue'),
+      zoom: document.getElementById('zoom'),
+      rotation: document.getElementById('rotation'),
+      sharpen: document.getElementById('sharpen'),
+      threshold: document.getElementById('threshold'),
+      invert: document.getElementById('invert'),
+      charSet: document.getElementById('charSet'),
+      customCharSet: document.getElementById('customCharSet'),
+      colorMode: document.getElementById('colorMode'),
+      textColor: document.getElementById('textColor'),
+      bgColor: document.getElementById('bgColor'),
+      ditherEnable: document.getElementById('ditherEnable'),
+      edgeDetect: document.getElementById('edgeDetect'),
+      valBrightness: document.getElementById('valBrightness'),
+      valContrast: document.getElementById('valContrast'),
+      valGamma: document.getElementById('valGamma'),
+      valSaturate: document.getElementById('valSaturate'),
+      valHue: document.getElementById('valHue'),
+      valZoom: document.getElementById('valZoom'),
+      valSharpen: document.getElementById('valSharpen'),
+      valThreshold: document.getElementById('valThreshold'),
+      openExportModalBtn: document.getElementById('openExportModalBtn'),
+      closeExportModalBtn: document.getElementById('closeExportModalBtn'),
+      modalRenderColors: document.getElementById('modalRenderColors'),
+      exportVideoBtn: document.getElementById('exportVideoBtn'),
+      exportReactBtn: document.getElementById('exportReactBtn'),
+      exportTxtBtn: document.getElementById('exportTxtBtn'),
+      copyTextBtn: document.getElementById('copyTextBtn'),
+      exportHtmlBtn: document.getElementById('exportHtmlBtn'),
+      exportPngBtn: document.getElementById('exportPngBtn')
+    };
+
+    let scene, camera, renderer, effect, controls, currentMesh;
+
+    function init() {
+      scene = new THREE.Scene();
+
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 0, 5);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+      scene.add(ambientLight);
+
+      const dirLight1 = new THREE.DirectionalLight(0xffffff, 2.5);
+      dirLight1.position.set(5, 10, 7);
+      scene.add(dirLight1);
+
+      renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+
+      rebuildAsciiEffect();
+      createDefaultMesh();
+
+      setupTabs();
+      setupResolutionButtons();
+      setupUIEventListeners();
+      setupExportListeners();
+      setupDragAndDrop();
+
+      window.addEventListener('resize', onWindowResize);
+
+      animate();
+    }
+
+    function setupTabs() {
+      const tabs = document.querySelectorAll('.nav-tab');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+          tab.classList.add('active');
+          document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+        });
+      });
+    }
+
+    function setupResolutionButtons() {
+      const resButtons = document.querySelectorAll('.btn-res');
+      resButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          resButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentResolution = parseFloat(btn.getAttribute('data-res'));
+          rebuildAsciiEffect();
+        });
+      });
+    }
+
+    function rebuildAsciiEffect(forceTrueColor = false) {
+      if (effect && effect.domElement && workspace.contains(effect.domElement)) {
+        workspace.removeChild(effect.domElement);
+      }
+
+      let selectedCharSet = ui.charSet.value;
+      if (ui.customCharSet.value && ui.customCharSet.value.trim().length > 0) {
+        selectedCharSet = ui.customCharSet.value;
+      }
+      
+      if (ui.edgeDetect.checked) {
+        selectedCharSet = " ┼├┤┴┬┌┐└┘│─#@";
+      }
+
+      const threshVal = parseInt(ui.threshold.value);
+      if (threshVal > 0) {
+        const cutIndex = Math.floor((selectedCharSet.length - 1) * (threshVal / 100));
+        selectedCharSet = ' '.repeat(cutIndex) + selectedCharSet.substring(cutIndex);
+      }
+
+      effect = new AsciiEffect(renderer, selectedCharSet, { 
+        invert: ui.invert.checked,
+        resolution: currentResolution,
+        color: forceTrueColor
+      });
+      
+      effect.setSize(window.innerWidth, window.innerHeight);
+      
+      const domElem = effect.domElement;
+      applyColorTheme(domElem);
+      domElem.style.letterSpacing = '0px';
+      domElem.style.lineHeight = '1em';
+
+      updateDomFilters(domElem);
+      workspace.appendChild(domElem);
+
+      if (camera) {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+      }
+
+      if (controls) controls.dispose();
+      controls = new OrbitControls(camera, domElem);
+      controls.enableDamping = true;
+      controls.target.set(0, 0, 0);
+    }
+
+    function applyColorTheme(domElem) {
+      const el = domElem || (effect ? effect.domElement : null);
+      if (!el) return;
+
+      workspace.style.backgroundColor = ui.bgColor.value;
+
+      const mode = ui.colorMode.value;
+      if (mode === 'mono') {
+        el.style.color = ui.textColor.value;
+      } else if (mode === 'matrix') {
+        el.style.color = '#00ff66';
+        workspace.style.backgroundColor = '#001102';
+      } else if (mode === 'cyberpunk') {
+        el.style.color = '#ff007f';
+        workspace.style.backgroundColor = '#0a0015';
+      } else if (mode === 'amber') {
+        el.style.color = '#ffb000';
+        workspace.style.backgroundColor = '#150a00';
+      }
+    }
+
+    function updateDomFilters(domElem) {
+      const el = domElem || (effect ? effect.domElement : null);
+      if (!el) return;
+
+      const brightnessVal = ui.brightness.value;
+      const contrastVal = ui.contrast.value;
+      const gammaVal = ui.gamma.value;
+      const saturateVal = ui.saturate.value;
+      const hueVal = ui.hue.value;
+      const zoomVal = ui.zoom.value;
+      const rotVal = ui.rotation.value;
+      const sharpenVal = parseInt(ui.sharpen.value);
+
+      let filters = [];
+      filters.push(`brightness(${brightnessVal})`);
+      filters.push(`contrast(${contrastVal})`);
+      filters.push(`saturate(${saturateVal}%)`);
+      filters.push(`hue-rotate(${hueVal}deg)`);
+      
+      if (gammaVal != 1.0) {
+        const lift = (1 / gammaVal);
+        filters.push(`brightness(${lift})`);
+      }
+
+      if (sharpenVal > 0) {
+        const extraC = 1 + (sharpenVal / 50);
+        filters.push(`contrast(${extraC})`);
+      } else if (sharpenVal < 0) {
+        const blurAmount = (Math.abs(sharpenVal) / 30);
+        filters.push(`blur(${blurAmount}px)`);
+      }
+
+      if (ui.ditherEnable.checked) {
+        filters.push('brightness(1.05)');
+      }
+
+      el.style.filter = filters.join(' ') || 'none';
+      el.style.transform = `scale(${zoomVal}) rotate(${rotVal}deg)`;
+      el.style.transformOrigin = 'center center';
+    }
+
+    function setupUIEventListeners() {
+      ui.brightness.addEventListener('input', (e) => {
+        ui.valBrightness.textContent = e.target.value;
+        updateDomFilters();
+      });
+
+      ui.contrast.addEventListener('input', (e) => {
+        ui.valContrast.textContent = e.target.value;
+        updateDomFilters();
+      });
+
+      ui.gamma.addEventListener('input', (e) => {
+        ui.valGamma.textContent = e.target.value;
+        updateDomFilters();
+      });
+
+      ui.saturate.addEventListener('input', (e) => {
+        ui.valSaturate.textContent = `${e.target.value}%`;
+        updateDomFilters();
+      });
+
+      ui.hue.addEventListener('input', (e) => {
+        ui.valHue.textContent = `${e.target.value}°`;
+        updateDomFilters();
+      });
+
+      ui.zoom.addEventListener('input', (e) => {
+        ui.valZoom.textContent = `${e.target.value}x`;
+        updateDomFilters();
+      });
+
+      ui.rotation.addEventListener('change', () => updateDomFilters());
+
+      ui.sharpen.addEventListener('input', (e) => {
+        ui.valSharpen.textContent = e.target.value;
+        updateDomFilters();
+      });
+
+      ui.threshold.addEventListener('input', (e) => {
+        ui.valThreshold.textContent = e.target.value;
+        rebuildAsciiEffect();
+      });
+
+      ui.invert.addEventListener('change', () => rebuildAsciiEffect());
+      ui.ditherEnable.addEventListener('change', () => updateDomFilters());
+      ui.edgeDetect.addEventListener('change', () => rebuildAsciiEffect());
+
+      ui.charSet.addEventListener('change', () => rebuildAsciiEffect());
+      ui.customCharSet.addEventListener('input', () => rebuildAsciiEffect());
+      
+      ui.colorMode.addEventListener('change', () => rebuildAsciiEffect());
+
+      ui.textColor.addEventListener('input', () => applyColorTheme());
+      ui.bgColor.addEventListener('input', () => applyColorTheme());
+
+      ui.openExportModalBtn.addEventListener('click', () => {
+        exportModal.style.display = 'flex';
+      });
+
+      ui.closeExportModalBtn.addEventListener('click', () => {
+        exportModal.style.display = 'none';
+      });
+    }
+
+    function setupExportListeners() {
+      ui.exportVideoBtn.addEventListener('click', () => {
+        if (!isRecording) {
+          startRecording();
+        } else {
+          stopRecording();
+        }
+      });
+
+      ui.exportReactBtn.addEventListener('click', () => {
+        const charSetVal = (ui.customCharSet.value && ui.customCharSet.value.trim().length > 0) 
+          ? ui.customCharSet.value 
+          : ui.charSet.value;
+
+        const renderWithColors = ui.modalRenderColors.checked;
+
+        const reactCode = `import React, { useEffect, useRef } from 'react';
+import * as THREE from 'three';
+import { AsciiEffect } from 'three/examples/jsm/effects/AsciiEffect.js';
+
+export default function AsciiViewer({ videoUrl = "", imageUrl = "" }) {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, 0, 5);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, ${ui.brightness.value});
+    scene.add(ambientLight);
+
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+
+    let mesh;
+
+    if (videoUrl) {
+      const video = document.createElement('video');
+      video.src = videoUrl;
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.play();
+
+      const texture = new THREE.VideoTexture(video);
+      const geometry = new THREE.PlaneGeometry(3.5, 2);
+      const material = new THREE.MeshBasicMaterial({ map: texture });
+      mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
+    } else if (imageUrl) {
+      const texture = new THREE.TextureLoader().load(imageUrl);
+      const geometry = new THREE.PlaneGeometry(3, 2);
+      const material = new THREE.MeshBasicMaterial({ map: texture });
+      mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
+    }
+
+    const effect = new AsciiEffect(renderer, "${charSetVal.replace(/"/g, '\\"')}", {
+      invert: ${ui.invert.checked},
+      resolution: ${currentResolution},
+      color: ${renderWithColors}
+    });
+
+    effect.setSize(container.clientWidth, container.clientHeight);
+    effect.domElement.style.color = "${ui.textColor.value}";
+    effect.domElement.style.backgroundColor = "${ui.bgColor.value}";
+    effect.domElement.style.filter = "brightness(${ui.brightness.value}) contrast(${ui.contrast.value}) saturate(${ui.saturate.value}%) hue-rotate(${ui.hue.value}deg)";
+    effect.domElement.style.transform = "scale(${ui.zoom.value}) rotate(${ui.rotation.value}deg)";
+    
+    container.appendChild(effect.domElement);
+
+    let animationFrameId;
+    const animate = () => {
+      animationFrameId = requestAnimationFrame(animate);
+      effect.render(scene, camera);
+    };
+    animate();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      if (container.contains(effect.domElement)) {
+        container.removeChild(effect.domElement);
+      }
+    };
+  }, [videoUrl, imageUrl]);
+
+  return <div ref={containerRef} style={{ width: '100vw', height: '100vh', overflow: 'hidden' }} />;
+}
+`;
+
+        const blob = new Blob([reactCode], { type: 'text/javascript;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'AsciiViewer.jsx';
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      ui.exportTxtBtn.addEventListener('click', () => {
+        if (!effect) return;
+        const textContent = effect.domElement.innerText;
+        const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'ascii-art.txt';
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      ui.copyTextBtn.addEventListener('click', () => {
+        if (!effect) return;
+        const textContent = effect.domElement.innerText;
+        navigator.clipboard.writeText(textContent).then(() => {
+          alert('Skopiowano ASCII art do schowka!');
+        }).catch(() => {
+          alert('Błąd kopiowania do schowka.');
+        });
+      });
+
+      ui.exportHtmlBtn.addEventListener('click', () => {
+        if (!effect) return;
+        const renderWithColors = ui.modalRenderColors.checked;
+        if (renderWithColors) rebuildAsciiEffect(true);
+
+        setTimeout(() => {
+          const htmlContent = `<!DOCTYPE html>
+<html lang="pl">
+<head><meta charset="UTF-8"><title>Exported ASCII Art</title></head>
+<body style="background:${ui.bgColor.value}; margin:0; display:flex; justify-content:center; align-items:center; height:100vh; overflow:hidden;">
+${effect.domElement.outerHTML}
+</body>
+</html>`;
+          const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'ascii-art.html';
+          a.click();
+          URL.revokeObjectURL(url);
+
+          if (renderWithColors) rebuildAsciiEffect(false);
+        }, 100);
+      });
+
+      ui.exportPngBtn.addEventListener('click', () => {
+        if (!workspace) return;
+        const renderWithColors = ui.modalRenderColors.checked;
+        if (renderWithColors) rebuildAsciiEffect(true);
+
+        setTimeout(() => {
+          html2canvas(workspace, { backgroundColor: ui.bgColor.value }).then(canvas => {
+            const url = canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'ascii-studio-snapshot.png';
+            a.click();
+
+            if (renderWithColors) rebuildAsciiEffect(false);
+          }).catch(() => {
+            alert('Błąd generowania zrzutu ekranu PNG.');
+          });
+        }, 100);
+      });
+    }
+
+    function startRecording() {
+      html2canvas(workspace, { backgroundColor: ui.bgColor.value }).then(canvas => {
+        const stream = canvas.captureStream(30);
+        recordedChunks = [];
+
+        try {
+          mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+        } catch (e) {
+          mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        }
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'ascii-video-animation.webm';
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        ui.exportVideoBtn.textContent = 'Zatrzymaj nagrywanie i Pobierz';
+        ui.exportVideoBtn.classList.add('btn-recording');
+      });
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        isRecording = false;
+        ui.exportVideoBtn.textContent = 'Nagraj jako Video (WebM)';
+        ui.exportVideoBtn.classList.remove('btn-recording');
+      }
+    }
+
+    function centerObject(object) {
+      const box = new THREE.Box3().setFromObject(object);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = 1.4 / maxDim; // Zmniejszony współczynnik skalowania, aby obiekty były mniejsze i mieściły się w kadrze
+      object.scale.setScalar(scale);
+
+      object.position.x = -center.x * scale;
+      object.position.y = -center.y * scale;
+      object.position.z = -center.z * scale;
+    }
+
+    function createDefaultMesh() {
+      if (currentMesh) scene.remove(currentMesh);
+      isMediaLoaded = false;
+
+      const geometry = new THREE.TorusKnotGeometry(0.8, 0.3, 100, 16);
+      const material = new THREE.MeshStandardMaterial({ roughness: 0.3, metalness: 0.4 });
+      currentMesh = new THREE.Mesh(geometry, material);
+      centerObject(currentMesh);
+      
+      scene.add(currentMesh);
+    }
+
+    function loadModel(arrayBuffer) {
+      if (hiddenVideo) hiddenVideo.pause();
+      const loader = new GLTFLoader();
+      loader.parse(arrayBuffer, '', (gltf) => {
+        if (currentMesh) scene.remove(currentMesh);
+        isMediaLoaded = false;
+
+        currentMesh = gltf.scene;
+        centerObject(currentMesh);
+
+        scene.add(currentMesh);
+        rebuildAsciiEffect();
+      }, () => {
+        alert('Błąd odczytu pliku GLTF/GLB.');
+      });
+    }
+
+    function loadImage(dataUrl) {
+      if (hiddenVideo) hiddenVideo.pause();
+      const textureLoader = new THREE.TextureLoader();
+      textureLoader.load(dataUrl, (texture) => {
+        if (currentMesh) scene.remove(currentMesh);
+        isMediaLoaded = true;
+
+        const img = texture.image;
+        const aspect = img.width / img.height;
+        const geometry = new THREE.PlaneGeometry(aspect * 1.8, 1.8);
+        const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+        currentMesh = new THREE.Mesh(geometry, material);
+        currentMesh.position.set(0, 0, 0);
+        
+        scene.add(currentMesh);
+        rebuildAsciiEffect();
+      }, undefined, () => {
+        alert('Błąd wczytywania pliku graficznego.');
+      });
+    }
+
+    function loadVideo(file) {
+      if (currentMesh) scene.remove(currentMesh);
+      isMediaLoaded = true;
+
+      const url = URL.createObjectURL(file);
+      hiddenVideo.src = url;
+      hiddenVideo.play();
+
+      videoTexture = new THREE.VideoTexture(hiddenVideo);
+      
+      hiddenVideo.onloadedmetadata = () => {
+        const aspect = hiddenVideo.videoWidth / hiddenVideo.videoHeight;
+        const geometry = new THREE.PlaneGeometry(aspect * 1.8, 1.8);
+        const material = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide });
+        currentMesh = new THREE.Mesh(geometry, material);
+        currentMesh.position.set(0, 0, 0);
+
+        scene.add(currentMesh);
+        rebuildAsciiEffect();
+      };
+    }
+
+    function handleFile(file) {
+      const filename = file.name.toLowerCase();
+      const reader = new FileReader();
+
+      if (filename.endsWith('.gltf') || filename.endsWith('.glb')) {
+        reader.readAsArrayBuffer(file);
+        reader.onload = (e) => loadModel(e.target.result);
+      } else if (filename.match(/\.(png|jpg|jpeg|webp)$/)) {
+        reader.readAsDataURL(file);
+        reader.onload = (e) => loadImage(e.target.result);
+      } else if (filename.match(/\.(mp4|webm|ogv)$/)) {
+        loadVideo(file);
+      } else {
+        alert('Nieobsługiwany format pliku. Wybierz model 3D, obraz lub wideo.');
+      }
+    }
+
+    function setupDragAndDrop() {
+      workspace.addEventListener('dragover', (e) => e.preventDefault());
+      workspace.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) handleFile(e.target.files[0]);
+      });
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      if (effect) effect.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      if (controls) controls.update();
+
+      if (effect) {
+        effect.render(scene, camera);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
